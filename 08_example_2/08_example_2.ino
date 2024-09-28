@@ -30,39 +30,40 @@ void loop() {
   float distance;
 
   // wait until next sampling time. // polling
-  // millis() returns the number of milliseconds since the program started.
-  //    will overflow after 50 days.
   if (millis() < (last_sampling_time + INTERVAL))
     return;
 
   distance = USS_measure(PIN_TRIG, PIN_ECHO); // read distance
+  
+  // LED 밝기 변수
+  int led_brightness;
 
-  if ((distance == 0.0) || (distance > _DIST_MAX)) {
-      distance = _DIST_MAX + 10.0;    // Set Higher Value
-      digitalWrite(PIN_LED, 1);       // LED OFF
-  } else if (distance < _DIST_MIN) {
-      distance = _DIST_MIN - 10.0;    // Set Lower Value
-      digitalWrite(PIN_LED, 1);       // LED OFF
-  } else {    // In desired Range
-      digitalWrite(PIN_LED, 0);       // LED ON      
+  // 거리 범위에 따른 LED 밝기 제어
+  if (distance <= 100.0 || distance >= 300.0) {
+      led_brightness = 255;  // 100mm 이하 또는 300mm 이상에서는 LED 꺼짐 (최소 밝기)
+  } else if (distance == 150.0 || distance == 250.0) {
+      led_brightness = 128;  // 150mm 또는 250mm에서는 50% 밝기
+  } else if (distance < 200.0) {
+      // 100mm ~ 200mm 범위에서 거리가 가까울수록 밝아짐
+      led_brightness = map(distance, 100, 200, 255, 0);  // 100mm에서 어둡고, 200mm에서 가장 밝음
+  } else {
+      // 200mm ~ 300mm 범위에서 거리가 멀수록 어두워짐
+      led_brightness = map(distance, 200, 300, 0, 255);  // 200mm에서 가장 밝고, 300mm에서 어두움
   }
 
-  // output the distance to the serial port
-  Serial.print("Min:");        Serial.print(_DIST_MIN);
-  Serial.print(",distance:");  Serial.print(distance);
-  Serial.print(",Max:");       Serial.print(_DIST_MAX);
-  Serial.println("");
-  
-  // do something here
-  //delay(50); // Assume that it takes 50ms to do something.
+  // LED 밝기 설정 (0: 가장 밝음, 255: 꺼짐)
+  analogWrite(PIN_LED, led_brightness);
+
+  // 시리얼 모니터에 거리와 LED 밝기 출력
+  Serial.print("Distance: ");  Serial.print(distance);
+  Serial.print(" mm, LED Brightness: ");  Serial.println(led_brightness);
   
   // update last sampling time
   last_sampling_time += INTERVAL;
 }
 
 // get a distance reading from USS. return value is in millimeter.
-float USS_measure(int TRIG, int ECHO)
-{
+float USS_measure(int TRIG, int ECHO) {
   digitalWrite(TRIG, HIGH);
   delayMicroseconds(PULSE_DURATION);
   digitalWrite(TRIG, LOW);
