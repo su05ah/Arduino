@@ -1,29 +1,27 @@
-#define PIN_LED 13
-unsigned int count, toggle;
+#define PIN_LED 7
+unsigned int blinkCount;
 
 void setup() {
-  // put your setup code here, to run once:
-
   pinMode(PIN_LED, OUTPUT);
   Serial.begin(115200);
   Serial.println("Hello World!");
-  count = toggle = 0;
-  digitalWrite(PIN_LED, toggle);
+  blinkCount = 0;
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  Serial.println(++count);
-  toggle = toggle_state(toggle);
-  digitalWrite(PIN_LED, toggle);
-  Serial.println("Hello Wolrd!");
+  // 1초 동안 LED를 켬
+  digitalWrite(PIN_LED, HIGH);
   delay(1000);
-}
 
-int toggle_state(int toggle) {
-  if( toggle == 0) {
-    return 1;
-  } else {
-    return 0;
+  // 1초 동안 5회 깜빡이기 (100ms ON, 100ms OFF)
+  for (blinkCount = 0; blinkCount < 5; blinkCount++) {
+    digitalWrite(PIN_LED, LOW); // Turn LED off
+    delay(100);                 // Wait for 100ms
+    digitalWrite(PIN_LED, HIGH); // Turn LED on
+    delay(100);                 // Wait for 100ms
   }
+
+  // LED 끄고 무한루프
+  digitalWrite(PIN_LED, LOW);
+  while (1) {} // Infinite loop
 }
