@@ -45,17 +45,21 @@ void loop() {
   dist_raw = USS_measure(PIN_TRIG,PIN_ECHO);
   
   if ((dist_raw == 0.0) || (dist_raw > _DIST_MAX)) {
-      dist_raw = _DIST_MAX + 10.0;    // Set Higher Value
+      // dist_raw = _DIST_MAX + 10.0;    // Set Higher Value
+      dist_raw = dist_prev;
       digitalWrite(PIN_LED, 1);       // LED OFF
   } else if (dist_raw < _DIST_MIN) {
-      dist_raw = _DIST_MIN - 10.0;    // Set Lower Value
+      // dist_raw = _DIST_MIN - 10.0;    // Set Lower Value
+      dist_raw = dist_prev;
       digitalWrite(PIN_LED, 1);       // LED OFF
   } else {    // In desired Range
-      digitalWrite(PIN_LED, 0);       // LED ON      
+      digitalWrite(PIN_LED, 0);       // LED ON     
+      dist_prev = dist_raw; 
   }
 
   // Modify the below line to implement the EMA equation
   dist_ema = dist_raw;
+  
 
   // output the distance to the serial port
   Serial.print("Min:");   Serial.print(_DIST_MIN);
