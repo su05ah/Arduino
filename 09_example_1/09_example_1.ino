@@ -15,49 +15,69 @@
 
 #define _EMA_ALPHA 0.5    // EMA weight of new sample (range: 0 to 1)
                           // Setting EMA to 1 effectively disables EMA filter.
-// 전역 변수 선언
-float dist_raw;        // 센서로부터 측정한 원본 값
-float dist_prev = 0;   // 이전 측정값
-float dist_ema = 0;    // EMA 계산 값
-const float alpha = 0.5;  // EMA의 가중치 값 (PDF 실습에서 _EMA_ALPHA에 해당)
 
-// 범위 필터링에 사용할 최소, 최대 거리
-const int DIST_MIN = 10;   // 최소 유효 거리 (단위: mm)
-const int DIST_MAX = 350;  // 최대 유효 거리 (단위: mm)
-
-// 센서 데이터 측정 함수
-float getDistance() {
-  // 센서로부터 데이터를 읽어오는 코드 구현
-  // 예: 초음파 센서의 경우, 거리를 측정하여 반환
-  float distance = analogRead(A0); // 예시: 아날로그 핀에서 거리 측정
-  return distance;
-}
+// global variables
+unsigned long last_sampling_time;   // unit: msec
+float dist_prev = _DIST_MAX;        // Distance last-measured
+float dist_ema;                     // EMA distance
 
 void setup() {
-  Serial.begin(9600);  // 시리얼 모니터 시작
+  // initialize GPIO pins
+  pinMode(PIN_LED,OUTPUT);
+  pinMode(PIN_TRIG,OUTPUT);
+  pinMode(PIN_ECHO,INPUT);
+  digitalWrite(PIN_TRIG, LOW);
+
+  // initialize serial port
+  Serial.begin(57600);
 }
 
 void loop() {
-  // 센서로부터 거리값을 측정
-  dist_raw = getDistance();
+  float dist_raw;
+  
+  // wait until next sampling time. 
+  // millis() returns the number of milliseconds since the program started. 
+  //    will overflow after 50 days.
+  if (millis() < last_sampling_time + INTERVAL)
+    return;
 
-  // 범위 필터링: 측정값이 범위를 벗어나면 이전 값을 사용
-  if (dist_raw < DIST_MIN || dist_raw > DIST_MAX) {
-    dist_raw = dist_prev;  // 설정 범위 밖이면 이전 값 사용
-  } else {
-    dist_prev = dist_raw;  // 유효한 값이면 업데이트
+  // get a distance reading from the USS
+  dist_raw = USS_measure(PIN_TRIG,PIN_ECHO);
+  
+  if ((dist_raw == 0.0) || (dist_raw > _DIST_MAX)) {
+      dist_raw = _DIST_MAX + 10.0;    // Set Higher Value
+      digitalWrite(PIN_LED, 1);       // LED OFF
+  } else if (dist_raw < _DIST_MIN) {
+      dist_raw = _DIST_MIN - 10.0;    // Set Lower Value
+      digitalWrite(PIN_LED, 1);       // LED OFF
+  } else {    // In desired Range
+      digitalWrite(PIN_LED, 0);       // LED ON      
   }
 
-  // 지수가중 이동평균(EMA) 계산
-  dist_ema = alpha * dist_raw + (1 - alpha) * dist_ema;
+  // Modify the below line to implement the EMA equation
+  dist_ema = dist_raw;
 
-  // 시리얼 모니터에 결과 출력
-  Serial.print("Raw: "); Serial.print(dist_raw);
-  Serial.print(", EMA: "); Serial.println(dist_ema);
+  // output the distance to the serial port
+  Serial.print("Min:");   Serial.print(_DIST_MIN);
+  Serial.print(",raw:");  Serial.print(dist_raw);
+  Serial.print(",ema:");  Serial.print(dist_ema);
+  Serial.print(",Max:");  Serial.print(_DIST_MAX);
+  Serial.println("");
 
-  delay(100);  // 100ms 딜레이
+  // do something here
+
+  // update last sampling time
+  last_sampling_time += INTERVAL;
 }
 
+// get a distance reading from USS. return value is in millimeter.
+float USS_measure(int TRIG, int ECHO)
+{
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(PULSE_DURATION);
+  digitalWrite(TRIG, LOW);
+  
+  return pulseIn(ECHO, HIGH, TIMEOUT) * SCALE; // unit: mm
 
   // Pulse duration to distance conversion example (target distance = 17.3m)
   // - pulseIn(ECHO, HIGH, timeout) returns microseconds (음파의 왕복 시간)
@@ -68,3 +88,4 @@ void loop() {
   //        = 100,000 micro*sec * 0.001 milli/micro * 0.5 * 346 meter/sec
   //        = 100,000 * 0.001 * 0.5 * 346
   //        = 17,300 mm  ==> 17.3m
+}
