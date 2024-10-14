@@ -17,15 +17,12 @@
 #define SCALE (0.001 * 0.5 * SND_VEL) // coefficent to convert duration to distance
 
 #define _EMA_ALPHA 0.5    // EMA weight of new sample (range: 0 to 1)
-                          // Setting EMA to 1 effectively disables EMA filter.
 
 // Target Distance
 #define _TARGET_LOW  250.0
 #define _TARGET_HIGH 290.0
 
 // duty duration for myservo.writeMicroseconds()
-// NEEDS TUNING (servo by servo)
- 
 #define _DUTY_MIN 1000 // servo full clockwise position (0 degree)
 #define _DUTY_NEU 1500 // servo neutral position (90 degree)
 #define _DUTY_MAX 2000 // servo full counterclockwise position (180 degree)
@@ -77,14 +74,23 @@ void loop() {
   dist_ema = dist_raw;
 
   // adjust servo position according to the USS read value
-  // add your code here!
+  if (dist_raw < _TARGET_LOW) {
+    // Move servo to 0 degrees (full clockwise)
+    myservo.writeMicroseconds(_DUTY_MIN);
+  } else if (dist_raw > _TARGET_HIGH) {
+    // Move servo to 180 degrees (full counterclockwise)
+    myservo.writeMicroseconds(_DUTY_MAX);
+  } else {
+    // Move servo to the neutral position (90 degrees)
+    myservo.writeMicroseconds(_DUTY_NEU);
+  }
 
-
-  // output the distance to the serial port
+  // output the distance and servo status to the serial port
   Serial.print("Min:");    Serial.print(_DIST_MIN);
   Serial.print(",Low:");   Serial.print(_TARGET_LOW);
   Serial.print(",dist:");  Serial.print(dist_raw);
-  Serial.print(",Servo:"); Serial.print(myservo.read());  
+  Serial.print(",Servo:"); Serial.print(myservo.read());
+  Serial.print(",Servo Pulse Width:"); Serial.print(myservo.readMicroseconds());  
   Serial.print(",High:");  Serial.print(_TARGET_HIGH);
   Serial.print(",Max:");   Serial.print(_DIST_MAX);
   Serial.println("");
